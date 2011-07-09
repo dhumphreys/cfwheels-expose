@@ -33,9 +33,9 @@
 			else if (StructKeyExists(arguments, "relation"))
 				arguments.type = "relation";
 			else if (arguments.name EQ pluralize(arguments.name))
-				arguments.type = "singular";
-			else
 				arguments.type = "plural";
+			else
+				arguments.type = "singular";
 			
 			// store exposed methods
 			loc.exposedMethods = $exposedMethods();
@@ -79,6 +79,9 @@
 			// if method has not be ran yet
 			if (NOT StructKeyExists(loc.cache, loc.name)) {
 				loc.params = $exposedMethods()[loc.name];
+				
+				// look up named key for url params
+				loc.namedKey = loc.name & "Key";
 			
 				// trigger appropriate method behavior
 				switch(loc.params.type) {
@@ -88,8 +91,18 @@
 					case "method":
 						loc.returnVal = Evaluate("variables.#loc.params.method#()");
 						break;
+					case "singular":
+						if (StructKeyExists(params, loc.namedKey))
+							loc.returnVal = model(loc.params.model).findByKey(params[loc.namedKey]);
+						else if (StructKeyExists(params, "key"))
+							loc.returnVal = model(loc.params.model).findByKey(params.key);
+						else if (StructKeyExists(params, loc.name))
+							loc.returnVal = model(loc.params.model).new(params[loc.name]);
+						else
+							loc.returnVal = model(loc.params.model).new();
+						break;
 					default:
-						loc.returnVal = loc.params.model;
+						loc.returnVal = model(loc.params.model).findAll();
 				}
 				
 				// cache return value
