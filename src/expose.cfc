@@ -8,9 +8,10 @@
 	
 	<cffunction name="expose" returntype="void" access="public">
 		<cfargument name="name" type="string" required="true" />
+		<cfargument name="override" type="any" required="false" />
 		<cfargument name="model" type="string" required="false" />
 		<cfargument name="relation" type="any" required="false" />
-		<cfargument name="method" type="string" required="false" />
+		<cfargument name="method" type="any" required="false" />
 		<cfargument name="exec" type="string" required="false" />
 		<cfscript>
 			var loc = {};
@@ -19,6 +20,15 @@
 			if (NOT StructKeyExists(variables.$class, "hasExposedMethods")) {
 				filters(through="$registerExposedMethods");
 				variables.$class.hasExposedMethods = true;
+			}
+			
+			// if 'override' passed in, set up arguments based on type
+			if (StructKeyExists(arguments, "override")) {
+				if (IsCustomFunction(arguments.override))
+					arguments.method = arguments.override;
+				else if (IsSimpleValue(arguments.override))
+					arguments.exec = arguments.override;
+				StructDelete(arguments, "override");
 			}
 			
 			// get model name if not defined
@@ -90,7 +100,8 @@
 						
 					// execute a method
 					case "method":
-						loc.returnVal = Evaluate("variables.#loc.params.method#()");
+						var customMethod = loc.params.method;
+						loc.returnVal = customMethod();
 						break;
 						
 					// try to look up a single record
