@@ -151,4 +151,15 @@
 			return false;
 		</cfscript>
 	</cffunction>
+	
+	<cffunction name="$getObject" returntype="any" access="public">
+		<cfargument name="objectName" type="string" required="true">
+		<cfscript>
+			var loc = {};
+			loc.returnVal = loc[objectName] = core.$getObject(argumentCollection=arguments);
+			if (IsCustomFunction(loc.returnVal))
+				return Evaluate("loc.#objectName#()");
+			return loc.returnVal;
+		</cfscript>
+	</cffunction>
 </cfcomponent>
