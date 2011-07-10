@@ -79,28 +79,44 @@
 			// if method has not be ran yet
 			if (NOT StructKeyExists(loc.cache, loc.name)) {
 				loc.params = $exposedMethods()[loc.name];
-				
-				// look up named key for url params
-				loc.namedKey = loc.name & "Key";
 			
 				// trigger appropriate method behavior
 				switch(loc.params.type) {
+					
+					// execute a coldfusion statement
 					case "exec":
 						loc.returnVal = Evaluate(loc.params.exec);
 						break;
+						
+					// execute a method
 					case "method":
 						loc.returnVal = Evaluate("variables.#loc.params.method#()");
 						break;
+						
+					// try to look up a single record
 					case "singular":
-						if (StructKeyExists(params, loc.namedKey))
-							loc.returnVal = model(loc.params.model).findByKey(params[loc.namedKey]);
-						else if (StructKeyExists(params, "key"))
-							loc.returnVal = model(loc.params.model).findByKey(params.key);
-						else if (StructKeyExists(params, loc.name))
-							loc.returnVal = model(loc.params.model).new(params[loc.name]);
-						else
-							loc.returnVal = model(loc.params.model).new();
+						loc.key = $getExposedMethodKey(loc.name);
+						
+						// if key specified, try looking up record
+						if (loc.key NEQ false) {
+							loc.returnVal = model(loc.params.model).findByKey(params[loc.key]);
+							
+							// if record was not found, error out
+							if (NOT IsObject(loc.returnVal))
+								$throw(type="Wheels.RecordNotFound", message="Could not find record where `#loc.key# = #params[loc.key]#`");
+							
+							// if properties sent in url, set them in the model
+							if (StructKeyExists(params, loc.name))
+								loc.returnVal.setProperties(params[loc.name]);
+							
+						// otherwise, create a new model instance
+						} else {
+							loc.properties = StructKeyExists(params, loc.name) ? params[loc.name] : {};
+							loc.returnVal = model(loc.params.model).new(loc.properties);
+						}
 						break;
+					
+					// look up a collection of records
 					default:
 						loc.returnVal = model(loc.params.model).findAll();
 				}
@@ -110,6 +126,18 @@
 			}
 			
 			return loc.cache[loc.name];
+		</cfscript>
+	</cffunction>
+	
+	<cffunction name="$getExposedMethodKey" returntype="any" access="public">
+		<cfargument name="name" type="string" required="true" />
+		<cfscript>
+			var namedKey = name & "Key";
+			if (StructKeyExists(params, namedKey))
+				return namedKey;
+			else if (StructKeyExists(params, "key"))
+				return "key";
+			return false;
 		</cfscript>
 	</cffunction>
 </cfcomponent>
