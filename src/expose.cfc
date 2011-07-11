@@ -6,7 +6,7 @@
 		</cfscript>
 	</cffunction>
 	
-	<cffunction name="expose" returntype="void" access="public">
+	<cffunction name="expose" returntype="void" access="public" hint="Create a new getter function with standard lookup behavior and request caching">
 		<cfargument name="name" type="string" required="true" />
 		<cfargument name="override" type="any" required="false" />
 		<cfargument name="model" type="string" required="false" />
@@ -56,7 +56,7 @@
 		</cfscript>
 	</cffunction>
 	
-	<cffunction name="$exposedMethods" returntype="struct" access="public">
+	<cffunction name="$exposedMethods" returntype="struct" access="public" hint="Helper to access exposed method for this controller">
 		<cfscript>
 			if (NOT StructKeyExists(variables.$class, "exposedMethods"))
 				variables.$class.exposedMethods = {};
@@ -64,7 +64,7 @@
 		</cfscript>
 	</cffunction>
 	
-	<cffunction name="$exposedMethodCache" returntype="struct" access="public">
+	<cffunction name="$exposedMethodCache" returntype="struct" access="public" hint="Helper to access cached exposed method calls for this request">
 		<cfscript>
 			if (NOT StructKeyExists(request, "$exposedMethodCache"))
 				request.$exposedMethodCache = {};
@@ -72,7 +72,7 @@
 		</cfscript>
 	</cffunction>
 	
-	<cffunction name="$registerExposedMethods" returntype="void" access="public">
+	<cffunction name="$registerExposedMethods" returntype="void" access="public" hint="Filter to set up exposed methods for control execution">
 		<cfscript>
 			var key = "";
 			for (key in $exposedMethods())
@@ -80,11 +80,13 @@
 		</cfscript>
 	</cffunction>
 	
-	<cffunction name="$runExposedMethod" returntype="any" access="public">
+	<cffunction name="$runExposedMethod" returntype="any" access="public" hint="Method body for exposed methods. Lazily loads requested data set and returns it.">
 		<cfscript>
 			var loc = {};
-			loc.name = GetFunctionCalledName();
 			loc.cache = $exposedMethodCache();
+			
+			// grab name of called method so we can look it up
+			loc.name = GetFunctionCalledName();
 			
 			// if method has not be ran yet
 			if (NOT StructKeyExists(loc.cache, loc.name)) {
@@ -140,7 +142,7 @@
 		</cfscript>
 	</cffunction>
 	
-	<cffunction name="$getExposedMethodKey" returntype="any" access="public">
+	<cffunction name="$getExposedMethodKey" returntype="any" access="public" hint="Helper to get name of params key that should be used to look up instance">
 		<cfargument name="name" type="string" required="true" />
 		<cfscript>
 			var namedKey = name & "Key";
@@ -152,13 +154,16 @@
 		</cfscript>
 	</cffunction>
 	
-	<cffunction name="$getObject" returntype="any" access="public">
+	<cffunction name="$getObject" returntype="any" access="public" hint="Override wheels function so that exposed methods can be referenced in form helpers">
 		<cfargument name="objectName" type="string" required="true">
 		<cfscript>
 			var loc = {};
 			loc.returnVal = loc[objectName] = core.$getObject(argumentCollection=arguments);
+			
+			// if the value returned is a function, call it and return
 			if (IsCustomFunction(loc.returnVal))
 				return Evaluate("loc.#objectName#()");
+			
 			return loc.returnVal;
 		</cfscript>
 	</cffunction>
