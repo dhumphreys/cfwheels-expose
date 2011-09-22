@@ -6,7 +6,7 @@
 		</cfscript>
 	</cffunction>
 	
-	<cffunction name="expose" returntype="void" access="public" hint="Create a new getter function with standard lookup behavior and request caching">
+	<cffunction name="expose" returntype="void" access="public" output="false" hint="Create a new getter function with standard lookup behavior and request caching">
 		<cfargument name="name" type="string" required="true" />
 		<cfargument name="override" type="any" required="false" />
 		<cfargument name="model" type="string" required="false" />
@@ -56,7 +56,7 @@
 		</cfscript>
 	</cffunction>
 	
-	<cffunction name="$exposedMethods" returntype="struct" access="public" hint="Helper to access exposed method for this controller">
+	<cffunction name="$exposedMethods" returntype="struct" access="public" output="false" hint="Helper to access exposed method for this controller">
 		<cfscript>
 			if (NOT StructKeyExists(variables.$class, "exposedMethods"))
 				variables.$class.exposedMethods = {};
@@ -64,7 +64,7 @@
 		</cfscript>
 	</cffunction>
 	
-	<cffunction name="$exposedMethodCache" returntype="struct" access="public" hint="Helper to access cached exposed method calls for this request">
+	<cffunction name="$exposedMethodCache" returntype="struct" access="public" output="false" hint="Helper to access cached exposed method calls for this request">
 		<cfscript>
 			if (NOT StructKeyExists(request, "$exposedMethodCache"))
 				request.$exposedMethodCache = {};
@@ -72,7 +72,7 @@
 		</cfscript>
 	</cffunction>
 	
-	<cffunction name="$registerExposedMethods" returntype="void" access="public" hint="Filter to set up exposed methods for control execution">
+	<cffunction name="$registerExposedMethods" returntype="void" access="public" output="false" hint="Filter to set up exposed methods for control execution">
 		<cfscript>
 			var key = "";
 			for (key in $exposedMethods())
@@ -80,7 +80,7 @@
 		</cfscript>
 	</cffunction>
 	
-	<cffunction name="$runExposedMethod" returntype="any" access="public" hint="Method body for exposed methods. Lazily loads requested data set and returns it.">
+	<cffunction name="$runExposedMethod" returntype="any" access="public" output="false" hint="Method body for exposed methods. Lazily loads requested data set and returns it.">
 		<cfscript>
 			var loc = {};
 			loc.cache = $exposedMethodCache();
@@ -142,7 +142,7 @@
 		</cfscript>
 	</cffunction>
 	
-	<cffunction name="$getExposedMethodKey" returntype="any" access="public" hint="Helper to get name of params key that should be used to look up instance">
+	<cffunction name="$getExposedMethodKey" returntype="any" access="public" output="false" hint="Helper to get name of params key that should be used to look up instance">
 		<cfargument name="name" type="string" required="true" />
 		<cfscript>
 			var namedKey = name & "Key";
@@ -154,7 +154,7 @@
 		</cfscript>
 	</cffunction>
 	
-	<cffunction name="$getObject" returntype="any" access="public" hint="Override wheels function so that exposed methods can be referenced in form helpers">
+	<cffunction name="$getObject" returntype="any" access="public" output="false" hint="Override wheels function so that exposed methods can be referenced in form helpers">
 		<cfargument name="objectName" type="string" required="true">
 		<cfscript>
 			var loc = {};
