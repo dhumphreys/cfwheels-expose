@@ -81,6 +81,7 @@
 	</cffunction>
 	
 	<cffunction name="$runExposedMethod" returntype="any" access="public" output="false" hint="Method body for exposed methods. Lazily loads requested data set and returns it.">
+		<cfargument name="throwErrors" type="boolean" default="true" hint="Pass false to keep missing record errors from being thrown" />
 		<cfscript>
 			var loc = {};
 			loc.cache = $exposedMethodCache();
@@ -115,11 +116,11 @@
 							loc.returnVal = model(loc.params.model).findByKey(params[loc.key]);
 							
 							// if record was not found, error out
-							if (NOT IsObject(loc.returnVal))
+							if (NOT IsObject(loc.returnVal) AND arguments.throwErrors)
 								$throw(type="Wheels.RecordNotFound", message="Could not find record where `#loc.key# = #params[loc.key]#`");
 							
 							// if properties sent in url, set them in the model
-							if (StructKeyExists(params, loc.name))
+							if (IsObject(loc.returnVal) AND StructKeyExists(params, loc.name))
 								loc.returnVal.setProperties(params[loc.name]);
 							
 						// otherwise, create a new model instance
