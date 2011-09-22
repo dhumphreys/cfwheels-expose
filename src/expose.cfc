@@ -76,7 +76,7 @@
 		<cfscript>
 			var key = "";
 			for (key in $exposedMethods())
-				variables[key] = variables.$runExposedMethod;
+				this[key] = variables[key] = variables.$runExposedMethod;
 		</cfscript>
 	</cffunction>
 	
