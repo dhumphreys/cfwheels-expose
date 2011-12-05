@@ -7,12 +7,13 @@
 	</cffunction>
 	
 	<cffunction name="expose" returntype="void" access="public" output="false" hint="Create a new getter function with standard lookup behavior and request caching">
-		<cfargument name="name" type="string" required="true" />
-		<cfargument name="override" type="any" required="false" />
-		<cfargument name="model" type="string" required="false" />
-		<cfargument name="relation" type="any" required="false" />
-		<cfargument name="method" type="any" required="false" />
-		<cfargument name="exec" type="string" required="false" />
+		<cfargument name="name" type="string" required="true" hint="Name of exposed method to register" />
+		<cfargument name="override" type="any" required="false" hint="Override behavior. May be a method, relation, or exec string" />
+		<cfargument name="model" type="string" required="false" hint="Override model to use in expose" />
+		<cfargument name="parent" type="string" required="false" hint="Name of a parent expose function to use for looking up this record" />
+		<cfargument name="relation" type="any" required="false" hint="Set a relation to use for query logic" />
+		<cfargument name="method" type="any" required="false" hint="Set a method to use for query logic" />
+		<cfargument name="exec" type="string" required="false" hint="Set a string to execute for query logic" />
 		<cfscript>
 			var loc = {};
 			
@@ -52,7 +53,7 @@
 			loc.exposedMethods[arguments.name] = arguments;
 			
 			// set exposed method
-			variables[arguments.name] = variables.$runExposedMethod;
+			variables[arguments.name] = variables.$exposedMethodHandler;
 		</cfscript>
 	</cffunction>
 	
@@ -76,22 +77,25 @@
 		<cfscript>
 			var key = "";
 			for (key in $exposedMethods())
-				this[key] = variables[key] = variables.$runExposedMethod;
+				this[key] = variables[key] = variables.$exposedMethodHandler;
 		</cfscript>
 	</cffunction>
 	
+	<cffunction name="$exposedMethodHandler" returntype="any" access="public" output="false" hint="Wrapper for exposed that intelligently determines the called function name">
+		<cfargument name="throwErrors" type="boolean" default="true" hint="Pass false to keep missing record errors from being thrown" />
+		<cfreturn $runExposedMethod(name=GetFunctionCalledName(), argumentCollection=arguments) />
+	</cffunction>
+	
 	<cffunction name="$runExposedMethod" returntype="any" access="public" output="false" hint="Method body for exposed methods. Lazily loads requested data set and returns it.">
+		<cfargument name="name" type="string" required="true" hint="Name of exposed function to call" />
 		<cfargument name="throwErrors" type="boolean" default="true" hint="Pass false to keep missing record errors from being thrown" />
 		<cfscript>
 			var loc = {};
 			loc.cache = $exposedMethodCache();
 			
-			// grab name of called method so we can look it up
-			loc.name = GetFunctionCalledName();
-			
 			// if method has not be ran yet
-			if (NOT StructKeyExists(loc.cache, loc.name)) {
-				loc.params = $exposedMethods()[loc.name];
+			if (NOT StructKeyExists(loc.cache, arguments.name)) {
+				loc.params = $exposedMethods()[arguments.name];
 			
 				// trigger appropriate method behavior
 				switch(loc.params.type) {
@@ -109,25 +113,42 @@
 						
 					// try to look up a single record
 					case "singular":
-						loc.key = $getExposedMethodKey(loc.name);
+						loc.key = $getExposedMethodKey(arguments.name);
+						
+						// if there is a parent object set, use the parent as a scope
+						if (StructKeyExists(loc.params, "parent")) {
+							loc.scope = $runExposedMethod(name=loc.params.parent);
+							
+							// if the return is false or a new object, return false
+							if (NOT IsObject(loc.scope) OR loc.scope.isNew()) {
+								loc.returnVal = false;
+							} else {
+								
+								// look up child object
+								loc.returnVal = Evaluate("loc.scope.#arguments.name#()");
+								
+								// if the record was not found, set up a new one
+								if (NOT IsObject(loc.returnVal))
+									loc.returnVal = Evaluate("loc.scope.new#arguments.name#()");
+							}
 						
 						// if key specified, try looking up record
-						if (loc.key NEQ false) {
+						} else if (loc.key NEQ false) {
 							loc.returnVal = model(loc.params.model).findByKey(params[loc.key]);
 							
 							// if record was not found, error out
 							if (NOT IsObject(loc.returnVal) AND arguments.throwErrors)
 								$throw(type="Wheels.RecordNotFound", message="Could not find record where `#loc.key# = #params[loc.key]#`");
 							
-							// if properties sent in url, set them in the model
-							if (IsObject(loc.returnVal) AND StructKeyExists(params, loc.name))
-								loc.returnVal.setProperties(params[loc.name]);
-							
 						// otherwise, create a new model instance
 						} else {
-							loc.properties = StructKeyExists(params, loc.name) ? params[loc.name] : {};
-							loc.returnVal = model(loc.params.model).new(loc.properties);
+							loc.returnVal = model(loc.params.model).new();
 						}
+							
+						// if properties were sent in url, set them in the model
+						if (IsObject(loc.returnVal) AND StructKeyExists(params, arguments.name))
+							loc.returnVal.setProperties(params[arguments.name]);
+							
 						break;
 					
 					// look up a collection of records
@@ -136,10 +157,10 @@
 				}
 				
 				// cache return value
-				loc.cache[loc.name] = loc.returnVal;
+				loc.cache[arguments.name] = loc.returnVal;
 			}
 			
-			return loc.cache[loc.name];
+			return loc.cache[arguments.name];
 		</cfscript>
 	</cffunction>
 	
