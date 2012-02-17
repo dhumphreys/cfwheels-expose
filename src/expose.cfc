@@ -14,6 +14,7 @@
 		<cfargument name="relation" type="any" required="false" hint="Set a relation to use for query logic" />
 		<cfargument name="method" type="any" required="false" hint="Set a method to use for query logic" />
 		<cfargument name="exec" type="string" required="false" hint="Set a string to execute for query logic" />
+		<cfargument name="select" type="string" default="*" hint="Override the default select list for automatic exposed methods" />
 		<cfscript>
 			var loc = {};
 			
@@ -125,7 +126,7 @@
 							} else {
 								
 								// look up child object
-								loc.returnVal = Evaluate("loc.scope.#arguments.name#()");
+								loc.returnVal = Evaluate("loc.scope.#arguments.name#(select=loc.params.select)");
 								
 								// if the record was not found, set up a new one
 								if (NOT IsObject(loc.returnVal))
@@ -134,7 +135,7 @@
 						
 						// if key specified, try looking up record
 						} else if (loc.key NEQ false) {
-							loc.returnVal = model(loc.params.model).findByKey(params[loc.key]);
+							loc.returnVal = model(loc.params.model).findByKey(key=params[loc.key], select=loc.params.select);
 							
 							// if record was not found, error out
 							if (NOT IsObject(loc.returnVal) AND arguments.throwErrors)
@@ -153,7 +154,7 @@
 					
 					// look up a collection of records
 					default:
-						loc.returnVal = model(loc.params.model).findAll();
+						loc.returnVal = model(loc.params.model).findAll(select=loc.params.select);
 				}
 				
 				// cache return value
